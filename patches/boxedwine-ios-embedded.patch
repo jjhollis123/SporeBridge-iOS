@@ -57,7 +57,7 @@ diff --git a/source/sdl/main.cpp b/source/sdl/main.cpp
 diff --git a/source/util/log.cpp b/source/util/log.cpp
 --- a/source/util/log.cpp
 +++ b/source/util/log.cpp
-@@ -23,6 +23,9 @@
+@@ -21,6 +21,9 @@
  #include "knativesystem.h"
  
  #include <stdio.h>
@@ -67,7 +67,17 @@ diff --git a/source/util/log.cpp b/source/util/log.cpp
  
  #ifdef BOXEDWINE_MSVC
  #include <Windows.h>
-@@ -44,13 +47,17 @@ void internal_kpanic(BString msg) {
+@@ -36,12 +39,18 @@ void internal_kpanic(BString msg) {
+     BOXEDWINE_CRITICAL_SECTION_WITH_MUTEX(logMutex);
+     if (KSystem::logFile.isOpen()) {
+         KSystem::logFile.write(msg);
++#ifdef BOXEDWINE_EMBEDDED
++        KSystem::logFile.flush();
++#endif
+     }
+     fwrite(msg.c_str(), 1, msg.length(), stderr);
+     fflush(stderr);
+ #if defined(BOXEDWINE_MSVC) && defined(_DEBUG)
      OutputDebugStringA(msg.c_str());
  #endif
 +#ifdef BOXEDWINE_EMBEDDED
@@ -76,8 +86,7 @@ diff --git a/source/util/log.cpp b/source/util/log.cpp
      if (KSystem::videoOption == VIDEO_NORMAL) {
  #ifndef _TEST
          KNativeSystem::exit(msg.c_str(), 1);
- #endif
-     } else {
+@@ -50,6 +59,7 @@ void internal_kpanic(BString msg) {
          KNativeThread::sleep(5000);
      }
      exit(1);
@@ -85,3 +94,13 @@ diff --git a/source/util/log.cpp b/source/util/log.cpp
  }
  
  void kwarn(const char* msg) {
+@@ -68,6 +78,9 @@ void internal_log(BString msg, FILE* f) {
+     BOXEDWINE_CRITICAL_SECTION_WITH_MUTEX(logMutex);
+     if (KSystem::logFile.isOpen()) {
+         KSystem::logFile.write(msg);
++#ifdef BOXEDWINE_EMBEDDED
++        KSystem::logFile.flush();
++#endif
+     }
+     fwrite(msg.c_str(), 1, msg.length(), f);
+     fflush(f);
