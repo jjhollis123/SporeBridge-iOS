@@ -2,6 +2,8 @@
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+#import "RuntimeReadinessProbe.h"
+
 #include <filesystem>
 #include <string>
 
@@ -22,6 +24,7 @@ NSString* NSStringFromString(const std::string& value) {
 @interface SporeImportViewController () <UIDocumentPickerDelegate>
 @property(nonatomic, strong) UILabel* statusLabel;
 @property(nonatomic, strong) UIButton* importButton;
+@property(nonatomic, strong) UIButton* runtimeProbeButton;
 @property(nonatomic, strong) UIActivityIndicatorView* activityIndicator;
 @end
 
@@ -70,6 +73,19 @@ NSString* NSStringFromString(const std::string& value) {
                         action:@selector(chooseFolder)
               forControlEvents:UIControlEventTouchUpInside];
 
+  self.runtimeProbeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+  self.runtimeProbeButton.translatesAutoresizingMaskIntoConstraints = NO;
+  [self.runtimeProbeButton setTitle:@"Run runtime readiness test"
+                           forState:UIControlStateNormal];
+  self.runtimeProbeButton.titleLabel.font =
+      [UIFont preferredFontForTextStyle:UIFontTextStyleHeadline];
+  self.runtimeProbeButton.configuration =
+      [UIButtonConfiguration tintedButtonConfiguration];
+  self.runtimeProbeButton.enabled = NO;
+  [self.runtimeProbeButton addTarget:self
+                              action:@selector(runRuntimeReadinessProbe)
+                    forControlEvents:UIControlEventTouchUpInside];
+
   self.activityIndicator = [[UIActivityIndicatorView alloc]
       initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
   self.activityIndicator.translatesAutoresizingMaskIntoConstraints = NO;
@@ -78,7 +94,7 @@ NSString* NSStringFromString(const std::string& value) {
   UILabel* runtimeStatus = [[UILabel alloc] init];
   runtimeStatus.translatesAutoresizingMaskIntoConstraints = NO;
   runtimeStatus.text =
-      @"Runtime status: Boxedwine integration is the next milestone.";
+      @"Runtime status: device probe available; Boxedwine interpreter next.";
   runtimeStatus.font =
       [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
   runtimeStatus.textColor = UIColor.secondaryLabelColor;
@@ -87,8 +103,8 @@ NSString* NSStringFromString(const std::string& value) {
 
   UIStackView* stack = [[UIStackView alloc]
       initWithArrangedSubviews:@[
-        heading, explanation, self.importButton, self.activityIndicator,
-        self.statusLabel, runtimeStatus
+        heading, explanation, self.importButton, self.runtimeProbeButton,
+        self.activityIndicator, self.statusLabel, runtimeStatus
       ]];
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   stack.axis = UILayoutConstraintAxisVertical;
@@ -104,6 +120,8 @@ NSString* NSStringFromString(const std::string& value) {
                                          constant:-28.0],
     [stack.centerYAnchor constraintEqualToAnchor:guide.centerYAnchor],
     [self.importButton.heightAnchor constraintGreaterThanOrEqualToConstant:52.0],
+    [self.runtimeProbeButton.heightAnchor
+        constraintGreaterThanOrEqualToConstant:52.0],
   ]];
 
   [self reportExistingImport];
@@ -135,6 +153,7 @@ NSString* NSStringFromString(const std::string& value) {
           fileExistsAtPath:destination.path
                isDirectory:&isDirectory] ||
       !isDirectory) {
+    self.runtimeProbeButton.enabled = NO;
     self.statusLabel.text =
         @"No installation imported yet. Extract any ZIP in Files first, then "
          @"choose the complete game folder.";
@@ -143,6 +162,7 @@ NSString* NSStringFromString(const std::string& value) {
 
   const auto report = sporebridge::validate_installation(
       std::filesystem::path(destination.fileSystemRepresentation));
+  self.runtimeProbeButton.enabled = report.valid;
   self.statusLabel.text =
       report.valid
           ? [NSString
@@ -164,6 +184,7 @@ NSString* NSStringFromString(const std::string& value) {
 
   BOOL scoped = [selectedURL startAccessingSecurityScopedResource];
   self.importButton.enabled = NO;
+  self.runtimeProbeButton.enabled = NO;
   [self.activityIndicator startAnimating];
   self.statusLabel.text = @"Checking the selected installation…";
 
@@ -203,6 +224,7 @@ NSString* NSStringFromString(const std::string& value) {
                     @"An installation is already present. Remove "
                      @"ImportedSpore from this app’s folder in Files before "
                      @"importing a replacement."];
+            self.runtimeProbeButton.enabled = YES;
           });
           return;
         }
@@ -240,7 +262,8 @@ NSString* NSStringFromString(const std::string& value) {
                                         copiedReport.root)),
           @"packageCount" : @(copiedReport.package_count),
           @"runtimeAttached" : @NO,
-          @"projectVersion" : @"0.1.0",
+          @"runtimeProbeAvailable" : @YES,
+          @"projectVersion" : @"0.2.0",
         };
         NSData* manifestData =
             [NSJSONSerialization dataWithJSONObject:manifest
@@ -253,6 +276,7 @@ NSString* NSStringFromString(const std::string& value) {
                  error:nil];
 
         dispatch_async(dispatch_get_main_queue(), ^{
+          self.runtimeProbeButton.enabled = YES;
           [self
               finishWithMessage:
                   [NSString
@@ -261,6 +285,88 @@ NSString* NSStringFromString(const std::string& value) {
                            @"the Boxedwine runtime milestone.",
                           NSStringFromString(sporebridge::edition_name(
                               copiedReport.edition))]];
+        });
+      });
+}
+
+- (void)runRuntimeReadinessProbe {
+  self.importButton.enabled = NO;
+  self.runtimeProbeButton.enabled = NO;
+  [self.activityIndicator startAnimating];
+  self.statusLabel.text = @"Testing this iPad’s runtime capabilities…";
+
+  dispatch_async(
+      dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSMutableDictionary<NSString*, id>* report =
+            [SporeBridgeRunRuntimeReadinessProbe() mutableCopy];
+        report[@"projectVersion"] = @"0.2.0";
+
+        NSURL* importURL = [self importDestinationURL];
+        NSURL* manifestURL =
+            [importURL URLByAppendingPathComponent:@"sporebridge-import.json"];
+        NSData* manifestData = [NSData dataWithContentsOfURL:manifestURL];
+        if (manifestData != nil) {
+          NSDictionary* manifest =
+              [NSJSONSerialization JSONObjectWithData:manifestData
+                                              options:0
+                                                error:nil];
+          if ([manifest isKindOfClass:NSDictionary.class]) {
+            report[@"importedEdition"] =
+                manifest[@"edition"] ?: @"unknown";
+            report[@"targetExecutable"] =
+                manifest[@"executable"] ?: @"unknown";
+          }
+        }
+
+        NSError* directoryError = nil;
+        NSURL* documents = [NSFileManager.defaultManager
+            URLsForDirectory:NSDocumentDirectory
+                   inDomains:NSUserDomainMask]
+                               .firstObject;
+        NSURL* diagnostics =
+            [documents URLByAppendingPathComponent:@"SporeBridgeDiagnostics"
+                                       isDirectory:YES];
+        BOOL directoryReady = [NSFileManager.defaultManager
+            createDirectoryAtURL:diagnostics
+     withIntermediateDirectories:YES
+                      attributes:nil
+                           error:&directoryError];
+
+        NSError* serialisationError = nil;
+        NSData* data =
+            [NSJSONSerialization dataWithJSONObject:report
+                                            options:(NSJSONWritingPrettyPrinted |
+                                                     NSJSONWritingSortedKeys)
+                                              error:&serialisationError];
+        NSError* writeError = nil;
+        BOOL written =
+            directoryReady && data != nil &&
+            [data writeToURL:
+                      [diagnostics
+                          URLByAppendingPathComponent:@"runtime-readiness.json"]
+                    options:NSDataWritingAtomic
+                      error:&writeError];
+
+        NSString* summary = SporeBridgeRuntimeReadinessSummary(report);
+        NSString* message = nil;
+        if (written) {
+          message = [summary
+              stringByAppendingString:
+                  @" Report saved in Files → SporeBridge → "
+                   @"SporeBridgeDiagnostics → runtime-readiness.json."];
+        } else {
+          NSError* error = writeError ?: serialisationError ?: directoryError;
+          message = [NSString
+              stringWithFormat:@"%@ The report could not be saved: %@",
+                               summary,
+                               error.localizedDescription ?: @"unknown error"];
+        }
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+          [self.activityIndicator stopAnimating];
+          self.importButton.enabled = YES;
+          self.runtimeProbeButton.enabled = YES;
+          self.statusLabel.text = message;
         });
       });
 }

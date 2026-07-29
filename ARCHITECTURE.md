@@ -30,7 +30,8 @@ can reach Metal.
 
 ### Gate 1: Installation import
 
-Status: implemented in source.
+Status: implemented and confirmed on a physical iPad with a user-owned GOG
+Galactic Adventures installation.
 
 Success means:
 
@@ -41,7 +42,9 @@ Success means:
 
 ### Gate 2: Runtime boot
 
-Status: upstream selected and pinned; iOS port not yet implemented.
+Status: upstream selected and pinned. Version 0.2 adds a physical-device probe
+for the host memory and Metal facilities needed by the initial interpreter;
+the Boxedwine iOS port is not yet implemented.
 
 Success means:
 

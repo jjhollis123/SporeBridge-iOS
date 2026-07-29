@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(SporeBridge VERSION 0.1.0 LANGUAGES CXX)
+project(SporeBridge VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,12 +16,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 
   add_executable(SporeBridge MACOSX_BUNDLE
     ios/main.mm
+    ios/RuntimeReadinessProbe.mm
     ios/SporeImportViewController.mm
   )
 
   target_link_libraries(SporeBridge PRIVATE
     spore_install_validator
     "-framework Foundation"
+    "-framework Metal"
     "-framework UIKit"
     "-framework UniformTypeIdentifiers"
   )
@@ -47,4 +49,3 @@ else()
     COMMAND spore_install_validator_tests
   )
 endif()
-

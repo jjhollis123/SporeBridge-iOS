@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - "agent/**"
     paths:
       - ".github/workflows/build-ios.yml"
       - "CMakeLists.txt"
@@ -75,22 +76,25 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
             "$APP_PATH/Info.plist")" = "uk.co.jjhollis.sporebridge"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-            "$APP_PATH/Info.plist")" = "0.1.0"
+            "$APP_PATH/Info.plist")" = "0.2.0"
           test "$(/usr/libexec/PlistBuddy -c 'Print :UIFileSharingEnabled' \
             "$APP_PATH/Info.plist")" = "true"
           strings "$APP_PATH/SporeBridge" | grep -Fq "Choose Spore folder"
+          strings "$APP_PATH/SporeBridge" | grep -Fq \
+            "Run runtime readiness test"
+          strings "$APP_PATH/SporeBridge" | grep -Fq \
+            "runtime-readiness.json"
           strings "$APP_PATH/SporeBridge" | grep -Fq "Boxedwine"
           lipo "$APP_PATH/SporeBridge" -verify_arch arm64
           mkdir -p package/Payload
           ditto "$APP_PATH" package/Payload/SporeBridge.app
           cd package
-          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.1.0-unsigned.ipa" Payload
+          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.2.0-unsigned.ipa" Payload
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: SporeBridge-iOS-v0.1.0
-          path: SporeBridge-iOS-v0.1.0-unsigned.ipa
+          name: SporeBridge-iOS-v0.2.0
+          path: SporeBridge-iOS-v0.2.0-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
-
