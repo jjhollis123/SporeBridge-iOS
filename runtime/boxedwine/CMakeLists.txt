@@ -14,6 +14,9 @@ add_subdirectory(
   "${CMAKE_CURRENT_BINARY_DIR}/sdl2"
   EXCLUDE_FROM_ALL
 )
+target_compile_options(SDL2-static PRIVATE
+  -Wno-error=declaration-after-statement
+)
 
 file(GLOB BOXEDWINE_SDL_SOURCES
   "${BOXEDWINE_SOURCE_DIR}/source/sdl/*.cpp"
