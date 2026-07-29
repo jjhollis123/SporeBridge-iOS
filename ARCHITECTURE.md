@@ -43,10 +43,12 @@ Success means:
 ### Gate 2: Runtime boot
 
 Status: in progress. The physical-device memory/Metal probe passed on an
-`iPad12,1` with an Apple A13 GPU. Version 0.3 compiles the pinned Boxedwine
-normal interpreter into the iOS app and adds a headless 32-bit x86 ELF
-bootstrap. The identical source selection executes that bootstrap on the host;
-the arm64 iOS build and physical-device run are the remaining checks.
+`iPad12,1` with an Apple A13 GPU. Version 0.3 compiled the pinned Boxedwine
+normal interpreter into the arm64 iOS app and added a headless 32-bit x86 ELF
+bootstrap. The first physical-device run returned `FAILED` before producing
+the marker, while its buffered log remained empty. Version 0.3.1 flushes every
+embedded log write and saves a structured result before Boxedwine starts, so
+the exact device failure boundary can be identified on the next run.
 
 Success means:
 
