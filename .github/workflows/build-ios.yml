@@ -2,10 +2,12 @@ name: Build SporeBridge iOS proof of concept
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
-      - "agent/**"
     paths:
       - ".github/workflows/build-ios.yml"
       - "CMakeLists.txt"
