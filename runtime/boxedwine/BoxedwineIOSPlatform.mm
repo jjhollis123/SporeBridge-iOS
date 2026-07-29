@@ -5,6 +5,10 @@
 
 #include "pixelformat.h"
 
+extern "C" {
+int SDL_AppleTVRemoteOpenedAsJoystick = 0;
+}
+
 extern "C" void MacPlatormSetThreadPriority(void) {
 }
 
