@@ -324,7 +324,7 @@ NSString* NSStringFromString(const std::string& value) {
           @"runtimeAttached" : @NO,
           @"interpreterAttached" : @YES,
           @"runtimeProbeAvailable" : @YES,
-          @"projectVersion" : @"0.3.1",
+          @"projectVersion" : @"0.3.2",
         };
         NSData* manifestData =
             [NSJSONSerialization dataWithJSONObject:manifest
@@ -363,7 +363,7 @@ NSString* NSStringFromString(const std::string& value) {
       dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSMutableDictionary<NSString*, id>* report =
             [SporeBridgeRunRuntimeReadinessProbe() mutableCopy];
-        report[@"projectVersion"] = @"0.3.1";
+        report[@"projectVersion"] = @"0.3.2";
 
         NSURL* importURL = [self importDestinationURL];
         NSURL* manifestURL =
