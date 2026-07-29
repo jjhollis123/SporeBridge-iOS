@@ -1,0 +1,96 @@
+name: Build SporeBridge iOS proof of concept
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-ios.yml"
+      - "CMakeLists.txt"
+      - "ios/**"
+      - "src/**"
+      - "tests/**"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Validate portable import logic
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Compile validator tests
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic \
+            src/spore_install_validator.cpp \
+            tests/spore_install_validator_tests.cpp \
+            -Isrc \
+            -o spore_install_validator_tests
+
+      - name: Run validator tests
+        run: ./spore_install_validator_tests
+
+  build:
+    name: Unsigned iPhone IPA
+    needs: test
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.4"
+
+      - name: Configure iPhone target
+        run: |
+          cmake -S . -B build-ios -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
+            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO
+
+      - name: Build unsigned application
+        run: |
+          cmake --build build-ios \
+            --config Release \
+            --target SporeBridge \
+            -- \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Package IPA
+        run: |
+          APP_PATH="$(find build-ios -type d -name SporeBridge.app -print -quit)"
+          test -n "$APP_PATH"
+          test -x "$APP_PATH/SporeBridge"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
+            "$APP_PATH/Info.plist")" = "uk.co.jjhollis.sporebridge"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+            "$APP_PATH/Info.plist")" = "0.1.0"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :UIFileSharingEnabled' \
+            "$APP_PATH/Info.plist")" = "true"
+          strings "$APP_PATH/SporeBridge" | grep -Fq "Choose Spore folder"
+          strings "$APP_PATH/SporeBridge" | grep -Fq "Boxedwine"
+          lipo "$APP_PATH/SporeBridge" -verify_arch arm64
+          mkdir -p package/Payload
+          ditto "$APP_PATH" package/Payload/SporeBridge.app
+          cd package
+          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.1.0-unsigned.ipa" Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SporeBridge-iOS-v0.1.0
+          path: SporeBridge-iOS-v0.1.0-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+
