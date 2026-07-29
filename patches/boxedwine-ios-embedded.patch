@@ -1,0 +1,87 @@
+diff --git a/platform/sdl/knativesystem.cpp b/platform/sdl/knativesystem.cpp
+--- a/platform/sdl/knativesystem.cpp
++++ b/platform/sdl/knativesystem.cpp
+@@ -21,6 +21,9 @@
+ #include "knativesystem.h"
+ #include <SDL.h>
+ #include "knativescreenSDL.h"
++#ifdef BOXEDWINE_EMBEDDED
++#include <stdexcept>
++#endif
+ #include "kvulkanSDL.h"
+ #include "../../source/x11/x11.h"
+ #include "../../source/util/threadutils.h"
+@@ -33,7 +36,7 @@
+ #include "../../source/opengl/sdl/sdlgl.h"
+ #endif
+ 
+-#ifndef __TEST
++#if !defined(__TEST) && !defined(BOXEDWINE_EMBEDDED)
+ int boxedmain(int argc, const char** argv);
+ 
+ int main(int argc, char** argv) {
+@@ -147,8 +150,12 @@ void KNativeSystem::scheduledNewThread(KThread* thread) {
+ }
+ 
+ void KNativeSystem::exit(const char* msg, U32 code) {
++#ifdef BOXEDWINE_EMBEDDED
++    throw std::runtime_error(msg ? msg : "Boxedwine stopped");
++#else
+     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", msg, nullptr);
+     _exit(code);
++#endif
+ }
+ 
+ void KNativeSystem::forceShutdown() {
+diff --git a/source/sdl/main.cpp b/source/sdl/main.cpp
+--- a/source/sdl/main.cpp
++++ b/source/sdl/main.cpp
+@@ -44,6 +44,6 @@ int boxedmain(int argc, const char **argv) {
+ 
+     klog("Starting ...");
+-#if defined(__MACH__)
++#if defined(__MACH__) && !defined(BOXEDWINE_EMBEDDED)
+     std::vector<BString> lines;
+     std::vector<const char*> args;
+     BString dataPath = KNativeSystem::getLocalDirectory();
+@@ -104,8 +104,8 @@ int boxedmain(int argc, const char **argv) {
+ 
+     Platform::init();
+     // currently to fake sound, we really need to play it and just silence it right before it goes to speaker, 
+     // this way the timing of the callback to get the audio from wine are correct.  Without this timing, things can hange.
+-    if (!KNativeSystem::init(startupArgs.videoOption, true/* startupArgs.soundEnabled */)) {
++    if (!KNativeSystem::init(startupArgs.videoOption, startupArgs.soundEnabled)) {
+         return 1;
+     }
+ #ifndef BOXEDWINE_DISABLE_UI
+diff --git a/source/util/log.cpp b/source/util/log.cpp
+--- a/source/util/log.cpp
++++ b/source/util/log.cpp
+@@ -23,6 +23,9 @@
+ #include "knativesystem.h"
+ 
+ #include <stdio.h>
++#ifdef BOXEDWINE_EMBEDDED
++#include <stdexcept>
++#endif
+ 
+ #ifdef BOXEDWINE_MSVC
+ #include <Windows.h>
+@@ -44,13 +47,17 @@ void internal_kpanic(BString msg) {
+     OutputDebugStringA(msg.c_str());
+ #endif
++#ifdef BOXEDWINE_EMBEDDED
++    throw std::runtime_error(msg.c_str());
++#else
+     if (KSystem::videoOption == VIDEO_NORMAL) {
+ #ifndef _TEST
+         KNativeSystem::exit(msg.c_str(), 1);
+ #endif
+     } else {
+         KNativeThread::sleep(5000);
+     }
+     exit(1);
++#endif
+ }
+ 
+ void kwarn(const char* msg) {
