@@ -10,7 +10,7 @@ files remain on the device and are not uploaded to a server.
 
 ## Current milestone
 
-Version 0.3 attaches the first interpreter-only Boxedwine bootstrap to the
+Version 0.3.1 attaches the first interpreter-only Boxedwine bootstrap to the
 import and validation shell:
 
 - Presents a native iOS folder picker.
@@ -29,7 +29,10 @@ import and validation shell:
   game or Wine files.
 - Runs that programme headlessly through Boxedwine and verifies that its
   emulated file syscalls write a marker into the app's diagnostics folder.
-- Saves `boxedwine-bootstrap.log` for the first physical-device runtime test.
+- Flushes `boxedwine-bootstrap.log` after every embedded log write so a
+  physical-device failure does not leave a misleading empty file.
+- Saves `boxedwine-bootstrap-result.json` with the phase, exit code and marker
+  result; an interrupted run remains recorded as `running`.
 
 The longer runtime milestone uses
 [Boxedwine](https://github.com/danoon2/Boxedwine), an open-source C++/SDL
@@ -54,7 +57,7 @@ The concrete first-port configuration and device-test sequence are recorded in
    - `SporebinEP1/SporeApp.exe` for Galactic Adventures.
 5. It must also contain a data folder with at least one `.package` file.
 
-Version 0.3 deliberately imports folders rather than extracting ZIP archives
+Version 0.3.1 deliberately imports folders rather than extracting ZIP archives
 inside the app. This keeps the first proof of concept small and auditable.
 
 ## Building the validator tests

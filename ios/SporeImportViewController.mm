@@ -324,7 +324,7 @@ NSString* NSStringFromString(const std::string& value) {
           @"runtimeAttached" : @NO,
           @"interpreterAttached" : @YES,
           @"runtimeProbeAvailable" : @YES,
-          @"projectVersion" : @"0.3.0",
+          @"projectVersion" : @"0.3.1",
         };
         NSData* manifestData =
             [NSJSONSerialization dataWithJSONObject:manifest
@@ -363,7 +363,7 @@ NSString* NSStringFromString(const std::string& value) {
       dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSMutableDictionary<NSString*, id>* report =
             [SporeBridgeRunRuntimeReadinessProbe() mutableCopy];
-        report[@"projectVersion"] = @"0.3.0";
+        report[@"projectVersion"] = @"0.3.1";
 
         NSURL* importURL = [self importDestinationURL];
         NSURL* manifestURL =
@@ -445,11 +445,17 @@ NSString* NSStringFromString(const std::string& value) {
             SporeBridgeRunBoxedwineBootstrap();
         NSString* message = result[@"message"] ?: @"Interpreter test failed.";
         NSString* logPath = result[@"logPath"];
+        NSString* resultPath = result[@"resultPath"];
         if (logPath.length > 0) {
           message = [message
               stringByAppendingString:
                   @" Log: Files → SporeBridge → SporeBridgeDiagnostics → "
                    @"boxedwine-bootstrap.log."];
+        }
+        if (resultPath.length > 0) {
+          message = [message
+              stringByAppendingString:
+                  @" Result: boxedwine-bootstrap-result.json."];
         }
 
         dispatch_async(dispatch_get_main_queue(), ^{
