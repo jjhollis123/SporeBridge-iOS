@@ -1,5 +1,7 @@
 #import <UIKit/UIKit.h>
 
+#include <SDL_main.h>
+
 #import "SporeImportViewController.h"
 
 @interface SporeBridgeAppDelegate : UIResponder <UIApplicationDelegate>
@@ -25,10 +27,11 @@
 @end
 
 int main(int argc, char* argv[]) {
+  // SporeBridge owns the UIKit lifecycle instead of SDLUIKitDelegate.
+  SDL_SetMainReady();
   @autoreleasepool {
     return UIApplicationMain(argc, argv, nil,
                              NSStringFromClass(
                                  [SporeBridgeAppDelegate class]));
   }
 }
-
