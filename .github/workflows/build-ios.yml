@@ -107,6 +107,7 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DBOXEDWINE_SOURCE_DIR="$GITHUB_WORKSPACE/third_party/boxedwine" \
             -DBOXEDWINE_BOOTSTRAP_ROOT_ZIP="$GITHUB_WORKSPACE/build-assets/boxedwine-bootstrap-root.zip"
 
