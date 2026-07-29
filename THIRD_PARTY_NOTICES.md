@@ -1,6 +1,6 @@
 # Third-party notices
 
-SporeBridge 0.3 builds the following components into its unsigned test IPA.
+SporeBridge 0.3.1 builds the following components into its unsigned test IPA.
 The build uses the exact Boxedwine revision recorded in `upstream.env` and
 applies the source-level changes in `patches/boxedwine-ios-embedded.patch`.
 
