@@ -1,0 +1,17 @@
+SporeBridge integration code
+Copyright (C) 2026 Jason Hollis and contributors
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The complete GNU GPL version 2 licence text is available at:
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+
+Electronic Arts, Maxis, Spore and all related assets remain the property of
+their respective owners. This project contains no Electronic Arts game files.
+
