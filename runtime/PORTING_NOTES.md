@@ -52,7 +52,8 @@ Windows process and Direct3D 9 stack can initialise.
 
 ## Runtime proof sequence
 
-The first device test stops at the earliest failing boundary and retains logs:
+The first device test stops at the earliest failing boundary and retains an
+immediately flushed log plus `boxedwine-bootstrap-result.json`:
 
 1. Start Boxedwine and mount a two-entry bootstrap ZIP.
 2. Interpret the project-authored static 32-bit x86 Linux ELF.
