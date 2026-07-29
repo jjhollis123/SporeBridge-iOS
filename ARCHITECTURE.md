@@ -42,19 +42,25 @@ Success means:
 
 ### Gate 2: Runtime boot
 
-Status: upstream selected and pinned. Version 0.2 adds a physical-device probe
-for the host memory and Metal facilities needed by the initial interpreter;
-the Boxedwine iOS port is not yet implemented.
+Status: in progress. The physical-device memory/Metal probe passed on an
+`iPad12,1` with an Apple A13 GPU. Version 0.3 compiles the pinned Boxedwine
+normal interpreter into the iOS app and adds a headless 32-bit x86 ELF
+bootstrap. The identical source selection executes that bootstrap on the host;
+the arm64 iOS build and physical-device run are the remaining checks.
 
 Success means:
 
 - Boxedwine compiles as arm64 for iOS.
+- Its interpreter executes the bundled project-authored x86 bootstrap and
+  writes the expected marker.
 - A redistributable Wine environment starts.
 - The imported executable reaches process initialisation.
 - Logs are written into the Documents directory.
 
-The first target uses Boxedwine's normal interpreter, SDL's iOS backend and
-the OpenGL-to-ES path. It does not enable JIT or request executable memory.
+The first target uses Boxedwine's normal interpreter and SDL's iOS backend in
+headless mode. It does not enable JIT, graphics, audio or executable memory.
+The OpenGL-to-ES path is intentionally deferred until the CPU/kernel bootstrap
+passes on the iPad.
 See `runtime/PORTING_NOTES.md` for the source seams and proof sequence.
 
 ### Gate 3: Graphics

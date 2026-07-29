@@ -1,7 +1,7 @@
 build/
+build-assets/
 DerivedData/
 *.ipa
 *.xcarchive
 *.xcuserstate
 .DS_Store
-

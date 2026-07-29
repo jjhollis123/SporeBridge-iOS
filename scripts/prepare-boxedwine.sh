@@ -26,9 +26,8 @@ if [[ "$actual_commit" != "$BOXEDWINE_COMMIT" ]]; then
   exit 1
 fi
 
-test -f "$destination/LICENSE"
+test -f "$destination/license.txt"
 test -f "$destination/platform/sdl/knativescreenSDL.cpp"
 test -f "$destination/lib/sdl2/include/SDL_config_iphoneos.h"
 
 echo "Prepared Boxedwine $actual_commit"
-

@@ -2,6 +2,7 @@
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+#import "BoxedwineBootstrap.h"
 #import "RuntimeReadinessProbe.h"
 
 #include <filesystem>
@@ -25,6 +26,7 @@ NSString* NSStringFromString(const std::string& value) {
 @property(nonatomic, strong) UILabel* statusLabel;
 @property(nonatomic, strong) UIButton* importButton;
 @property(nonatomic, strong) UIButton* runtimeProbeButton;
+@property(nonatomic, strong) UIButton* boxedwineBootstrapButton;
 @property(nonatomic, strong) UIActivityIndicatorView* activityIndicator;
 @end
 
@@ -86,6 +88,22 @@ NSString* NSStringFromString(const std::string& value) {
                               action:@selector(runRuntimeReadinessProbe)
                     forControlEvents:UIControlEventTouchUpInside];
 
+  self.boxedwineBootstrapButton =
+      [UIButton buttonWithType:UIButtonTypeSystem];
+  self.boxedwineBootstrapButton.translatesAutoresizingMaskIntoConstraints = NO;
+  [self.boxedwineBootstrapButton
+      setTitle:@"Run Boxedwine interpreter test"
+      forState:UIControlStateNormal];
+  self.boxedwineBootstrapButton.titleLabel.font =
+      [UIFont preferredFontForTextStyle:UIFontTextStyleHeadline];
+  self.boxedwineBootstrapButton.configuration =
+      [UIButtonConfiguration tintedButtonConfiguration];
+  self.boxedwineBootstrapButton.enabled = NO;
+  [self.boxedwineBootstrapButton
+      addTarget:self
+         action:@selector(runBoxedwineBootstrap)
+  forControlEvents:UIControlEventTouchUpInside];
+
   self.activityIndicator = [[UIActivityIndicatorView alloc]
       initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
   self.activityIndicator.translatesAutoresizingMaskIntoConstraints = NO;
@@ -94,7 +112,8 @@ NSString* NSStringFromString(const std::string& value) {
   UILabel* runtimeStatus = [[UILabel alloc] init];
   runtimeStatus.translatesAutoresizingMaskIntoConstraints = NO;
   runtimeStatus.text =
-      @"Runtime status: device probe available; Boxedwine interpreter next.";
+      @"Runtime status: Boxedwine interpreter bootstrap attached. This test "
+       @"does not launch Wine or Spore yet.";
   runtimeStatus.font =
       [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
   runtimeStatus.textColor = UIColor.secondaryLabelColor;
@@ -104,7 +123,8 @@ NSString* NSStringFromString(const std::string& value) {
   UIStackView* stack = [[UIStackView alloc]
       initWithArrangedSubviews:@[
         heading, explanation, self.importButton, self.runtimeProbeButton,
-        self.activityIndicator, self.statusLabel, runtimeStatus
+        self.boxedwineBootstrapButton, self.activityIndicator,
+        self.statusLabel, runtimeStatus
       ]];
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   stack.axis = UILayoutConstraintAxisVertical;
@@ -121,6 +141,8 @@ NSString* NSStringFromString(const std::string& value) {
     [stack.centerYAnchor constraintEqualToAnchor:guide.centerYAnchor],
     [self.importButton.heightAnchor constraintGreaterThanOrEqualToConstant:52.0],
     [self.runtimeProbeButton.heightAnchor
+        constraintGreaterThanOrEqualToConstant:52.0],
+    [self.boxedwineBootstrapButton.heightAnchor
         constraintGreaterThanOrEqualToConstant:52.0],
   ]];
 
@@ -146,6 +168,30 @@ NSString* NSStringFromString(const std::string& value) {
                                     isDirectory:YES];
 }
 
+- (NSURL*)diagnosticsDirectoryURL {
+  NSURL* documents = [NSFileManager.defaultManager
+      URLsForDirectory:NSDocumentDirectory
+             inDomains:NSUserDomainMask]
+                         .firstObject;
+  return [documents URLByAppendingPathComponent:@"SporeBridgeDiagnostics"
+                                    isDirectory:YES];
+}
+
+- (BOOL)savedReadinessAllowsInterpreter {
+  NSURL* reportURL =
+      [[self diagnosticsDirectoryURL]
+          URLByAppendingPathComponent:@"runtime-readiness.json"];
+  NSData* data = [NSData dataWithContentsOfURL:reportURL];
+  if (data == nil) {
+    return NO;
+  }
+
+  NSDictionary* report =
+      [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+  return [report isKindOfClass:NSDictionary.class] &&
+         [report[@"readyForInterpreter"] boolValue];
+}
+
 - (void)reportExistingImport {
   NSURL* destination = [self importDestinationURL];
   BOOL isDirectory = NO;
@@ -154,6 +200,7 @@ NSString* NSStringFromString(const std::string& value) {
                isDirectory:&isDirectory] ||
       !isDirectory) {
     self.runtimeProbeButton.enabled = NO;
+    self.boxedwineBootstrapButton.enabled = NO;
     self.statusLabel.text =
         @"No installation imported yet. Extract any ZIP in Files first, then "
          @"choose the complete game folder.";
@@ -163,14 +210,18 @@ NSString* NSStringFromString(const std::string& value) {
   const auto report = sporebridge::validate_installation(
       std::filesystem::path(destination.fileSystemRepresentation));
   self.runtimeProbeButton.enabled = report.valid;
+  self.boxedwineBootstrapButton.enabled =
+      report.valid && [self savedReadinessAllowsInterpreter];
   self.statusLabel.text =
       report.valid
           ? [NSString
                 stringWithFormat:
-                    @"Imported installation ready: %@. The Windows runtime "
-                     @"still needs to be attached before the game can launch.",
+                    @"Imported installation ready: %@. %@",
                     NSStringFromString(
-                        sporebridge::edition_name(report.edition))]
+                        sporebridge::edition_name(report.edition)),
+                    self.boxedwineBootstrapButton.enabled
+                        ? @"The interpreter test is ready."
+                        : @"Run the readiness test before the interpreter."]
           : NSStringFromString(report.message);
 }
 
@@ -185,6 +236,7 @@ NSString* NSStringFromString(const std::string& value) {
   BOOL scoped = [selectedURL startAccessingSecurityScopedResource];
   self.importButton.enabled = NO;
   self.runtimeProbeButton.enabled = NO;
+  self.boxedwineBootstrapButton.enabled = NO;
   [self.activityIndicator startAnimating];
   self.statusLabel.text = @"Checking the selected installation…";
 
@@ -218,13 +270,21 @@ NSString* NSStringFromString(const std::string& value) {
         }
 
         if (alreadyExists) {
+          const BOOL existingImportIsValid =
+              sporebridge::validate_installation(
+                  std::filesystem::path(
+                      destination.fileSystemRepresentation))
+                  .valid;
           dispatch_async(dispatch_get_main_queue(), ^{
             [self
                 finishWithMessage:
                     @"An installation is already present. Remove "
                      @"ImportedSpore from this app’s folder in Files before "
                      @"importing a replacement."];
-            self.runtimeProbeButton.enabled = YES;
+            self.runtimeProbeButton.enabled = existingImportIsValid;
+            self.boxedwineBootstrapButton.enabled =
+                existingImportIsValid &&
+                [self savedReadinessAllowsInterpreter];
           });
           return;
         }
@@ -262,8 +322,9 @@ NSString* NSStringFromString(const std::string& value) {
                                         copiedReport.root)),
           @"packageCount" : @(copiedReport.package_count),
           @"runtimeAttached" : @NO,
+          @"interpreterAttached" : @YES,
           @"runtimeProbeAvailable" : @YES,
-          @"projectVersion" : @"0.2.0",
+          @"projectVersion" : @"0.3.0",
         };
         NSData* manifestData =
             [NSJSONSerialization dataWithJSONObject:manifest
@@ -277,6 +338,8 @@ NSString* NSStringFromString(const std::string& value) {
 
         dispatch_async(dispatch_get_main_queue(), ^{
           self.runtimeProbeButton.enabled = YES;
+          self.boxedwineBootstrapButton.enabled =
+              [self savedReadinessAllowsInterpreter];
           [self
               finishWithMessage:
                   [NSString
@@ -292,6 +355,7 @@ NSString* NSStringFromString(const std::string& value) {
 - (void)runRuntimeReadinessProbe {
   self.importButton.enabled = NO;
   self.runtimeProbeButton.enabled = NO;
+  self.boxedwineBootstrapButton.enabled = NO;
   [self.activityIndicator startAnimating];
   self.statusLabel.text = @"Testing this iPad’s runtime capabilities…";
 
@@ -299,7 +363,7 @@ NSString* NSStringFromString(const std::string& value) {
       dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSMutableDictionary<NSString*, id>* report =
             [SporeBridgeRunRuntimeReadinessProbe() mutableCopy];
-        report[@"projectVersion"] = @"0.2.0";
+        report[@"projectVersion"] = @"0.3.0";
 
         NSURL* importURL = [self importDestinationURL];
         NSURL* manifestURL =
@@ -319,13 +383,7 @@ NSString* NSStringFromString(const std::string& value) {
         }
 
         NSError* directoryError = nil;
-        NSURL* documents = [NSFileManager.defaultManager
-            URLsForDirectory:NSDocumentDirectory
-                   inDomains:NSUserDomainMask]
-                               .firstObject;
-        NSURL* diagnostics =
-            [documents URLByAppendingPathComponent:@"SporeBridgeDiagnostics"
-                                       isDirectory:YES];
+        NSURL* diagnostics = [self diagnosticsDirectoryURL];
         BOOL directoryReady = [NSFileManager.defaultManager
             createDirectoryAtURL:diagnostics
      withIntermediateDirectories:YES
@@ -366,6 +424,39 @@ NSString* NSStringFromString(const std::string& value) {
           [self.activityIndicator stopAnimating];
           self.importButton.enabled = YES;
           self.runtimeProbeButton.enabled = YES;
+          self.boxedwineBootstrapButton.enabled =
+              written && [report[@"readyForInterpreter"] boolValue];
+          self.statusLabel.text = message;
+        });
+      });
+}
+
+- (void)runBoxedwineBootstrap {
+  self.importButton.enabled = NO;
+  self.runtimeProbeButton.enabled = NO;
+  self.boxedwineBootstrapButton.enabled = NO;
+  [self.activityIndicator startAnimating];
+  self.statusLabel.text =
+      @"Running the 32-bit x86 interpreter bootstrap. This can take a moment…";
+
+  dispatch_async(
+      dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSDictionary<NSString*, id>* result =
+            SporeBridgeRunBoxedwineBootstrap();
+        NSString* message = result[@"message"] ?: @"Interpreter test failed.";
+        NSString* logPath = result[@"logPath"];
+        if (logPath.length > 0) {
+          message = [message
+              stringByAppendingString:
+                  @" Log: Files → SporeBridge → SporeBridgeDiagnostics → "
+                   @"boxedwine-bootstrap.log."];
+        }
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+          [self.activityIndicator stopAnimating];
+          self.importButton.enabled = YES;
+          self.runtimeProbeButton.enabled = YES;
+          self.boxedwineBootstrapButton.enabled = NO;
           self.statusLabel.text = message;
         });
       });

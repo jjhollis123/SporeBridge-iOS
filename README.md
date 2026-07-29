@@ -10,8 +10,8 @@ files remain on the device and are not uploaded to a server.
 
 ## Current milestone
 
-Version 0.2 adds an on-device runtime readiness probe to the import and
-validation shell:
+Version 0.3 attaches the first interpreter-only Boxedwine bootstrap to the
+import and validation shell:
 
 - Presents a native iOS folder picker.
 - Recognises base-game and Galactic Adventures executable layouts.
@@ -23,16 +23,22 @@ validation shell:
   Boxedwine interpreter build.
 - Records the Metal graphics device and saves a JSON diagnostic report in the
   app's Documents directory.
-- Clearly reports that the Windows runtime is not attached yet.
+- Builds the pinned Boxedwine core as an arm64 iOS static library, with no JIT
+  or executable-memory entitlement.
+- Bundles a project-authored 32-bit x86 Linux test programme containing no
+  game or Wine files.
+- Runs that programme headlessly through Boxedwine and verifies that its
+  emulated file syscalls write a marker into the app's diagnostics folder.
+- Saves `boxedwine-bootstrap.log` for the first physical-device runtime test.
 
-The runtime milestone will integrate an iOS port of
+The longer runtime milestone uses
 [Boxedwine](https://github.com/danoon2/Boxedwine), an open-source C++/SDL
 runtime for 32-bit Windows applications. Boxedwine is a better initial fit than
 a full Windows virtual machine because it already combines Wine with x86 CPU
 and Linux-kernel emulation.
 
 The selected upstream revision is pinned in `upstream.env`. Running
-`scripts/prepare-boxedwine.sh DESTINATION` reconstructs that exact source and
+`bash scripts/prepare-boxedwine.sh DESTINATION` reconstructs that exact source and
 verifies the SDL/iOS prerequisites that are already present upstream.
 The concrete first-port configuration and device-test sequence are recorded in
 `runtime/PORTING_NOTES.md`.
@@ -48,7 +54,7 @@ The concrete first-port configuration and device-test sequence are recorded in
    - `SporebinEP1/SporeApp.exe` for Galactic Adventures.
 5. It must also contain a data folder with at least one `.package` file.
 
-Version 0.2 deliberately imports folders rather than extracting ZIP archives
+Version 0.3 deliberately imports folders rather than extracting ZIP archives
 inside the app. This keeps the first proof of concept small and auditable.
 
 ## Building the validator tests
@@ -66,16 +72,19 @@ g++ -std=c++17 -Wall -Wextra -Werror -pedantic \
 ## Building the unsigned IPA
 
 The included GitHub Actions workflow uses a macOS runner and Xcode to produce
-an unsigned arm64 IPA. The build contains the native importer, validator and
-runtime readiness probe until the Boxedwine runtime milestone is completed.
+an unsigned arm64 IPA. An Ubuntu job first assembles the minimal 32-bit x86
+guest and packages its two-entry root ZIP. The macOS job reconstructs the
+pinned Boxedwine source, applies the public iOS embedding patch, and links the
+interpreter into SporeBridge.
 
 ## Status and limitations
 
-Passing the import and readiness checks proves only that iOS can receive a
-Spore installation and provide the basic memory and graphics facilities needed
-by the first interpreter experiment. It does not prove playable speed. The next
-decisive test is to bring up Boxedwine on iOS, launch the supplied
-`SporeApp.exe`, and capture the first graphics and diagnostic output.
+The bootstrap has been compiled and run successfully on a Linux host using the
+same non-JIT source selection. Passing it on a physical iPad will prove the
+arm64 iOS interpreter, ELF loader and basic emulated syscalls, but still will
+not prove Wine compatibility or playable speed. The next stage after that is a
+redistributable Wine root, followed by process initialisation of the user's
+locally supplied `SporeApp.exe`.
 
 This is an independent preservation and compatibility experiment. It is not
 affiliated with, authorised by or endorsed by Electronic Arts or Maxis.

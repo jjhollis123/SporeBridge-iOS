@@ -9,10 +9,10 @@ Build Boxedwine as an arm64 iOS static library and invoke it inside the
 SporeBridge process. Keep the first target intentionally conservative:
 
 - `BOXEDWINE_64` for the 64-bit host.
-- `BOXEDWINE_ES` for Boxedwine's OpenGL-to-OpenGL-ES translation path.
 - `BOXEDWINE_POSIX` for the Unix-like host layer.
 - `SDL2=1` with SDL's UIKit/iPhoneOS backend.
 - `BOXEDWINE_ZLIB` for packaged runtime data.
+- `BOXEDWINE_DISABLE_UI` and `-novideo -nosound` for the first headless proof.
 - No `BOXEDWINE_JIT`, `BOXEDWINE_JIT_ARMV8` or executable-memory entitlement
   in the first build.
 - Start single-threaded, then enable `BOXEDWINE_MULTI_THREADED` only after the
@@ -40,8 +40,8 @@ Windows process and Direct3D 9 stack can initialise.
 2. Audit the POSIX virtual-memory functions on a physical iOS device. The
    interpreter needs readable and writable guest memory, but the first target
    must not request executable mappings.
-3. Provide a UIKit-owned SDL surface. Boxedwine must not create a second app
-   event loop or desktop window.
+3. Run the first bootstrap with SDL events only and no SDL window. A
+   UIKit-owned graphics surface is a later adaptation.
 4. Redirect logs, Wine prefix data and saves to the app's Documents or
    Application Support directories.
 5. Bundle a redistributable Boxedwine/Wine root filesystem separately from
@@ -52,17 +52,18 @@ Windows process and Direct3D 9 stack can initialise.
 
 ## Runtime proof sequence
 
-The first device test should stop at the earliest failing boundary and retain
-logs:
+The first device test stops at the earliest failing boundary and retains logs:
 
-1. Start Boxedwine and mount its root filesystem.
-2. Run a tiny redistributable 32-bit Windows test executable.
-3. Run a simple Direct3D 9 test and capture the first frame.
-4. Mount `Documents/ImportedSpore` read-only as the game source.
-5. Start the detected `SporeApp.exe`.
-6. Record process startup, DLL, graphics and audio failures.
+1. Start Boxedwine and mount a two-entry bootstrap ZIP.
+2. Interpret the project-authored static 32-bit x86 Linux ELF.
+3. Verify that `open`, `write`, `close` and `exit` create the marker file.
+4. Add a redistributable Wine root and run a tiny Windows test executable.
+5. Run a simple Direct3D 9 test and capture the first frame.
+6. Mount `Documents/ImportedSpore` as the game source.
+7. Start the detected `SporeApp.exe`.
+8. Record process startup, DLL, graphics and audio failures.
 
-Only step 5 requires the user's locally supplied Spore installation. None of
+Only step 7 requires the user's locally supplied Spore installation. None of
 those files should be committed, uploaded by the app or included in an IPA.
 
 ## Go/no-go gate

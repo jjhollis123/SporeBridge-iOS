@@ -2,16 +2,24 @@ name: Build SporeBridge iOS proof of concept
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
-      - "agent/**"
     paths:
       - ".github/workflows/build-ios.yml"
       - "CMakeLists.txt"
+      - "LICENSE.txt"
+      - "THIRD_PARTY_NOTICES.md"
       - "ios/**"
+      - "patches/**"
+      - "runtime/**"
+      - "scripts/**"
       - "src/**"
       - "tests/**"
+      - "upstream.env"
 
 permissions:
   contents: read
@@ -35,20 +43,61 @@ jobs:
       - name: Run validator tests
         run: ./spore_install_validator_tests
 
+  bootstrap-root:
+    name: Build minimal x86 bootstrap root
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Assemble and package guest
+        run: |
+          bash scripts/build-bootstrap-root.sh \
+            build-assets/boxedwine-bootstrap-root.zip
+          unzip -l build-assets/boxedwine-bootstrap-root.zip
+          unzip -p build-assets/boxedwine-bootstrap-root.zip bin/hello \
+            > build-assets/hello
+          file build-assets/hello | grep -Fq \
+            "ELF 32-bit LSB executable, Intel 80386"
+
+      - name: Upload bootstrap root
+        uses: actions/upload-artifact@v4
+        with:
+          name: boxedwine-bootstrap-root
+          path: build-assets/boxedwine-bootstrap-root.zip
+          if-no-files-found: error
+          retention-days: 14
+
   build:
     name: Unsigned iPhone IPA
-    needs: test
+    needs:
+      - test
+      - bootstrap-root
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Download bootstrap root
+        uses: actions/download-artifact@v4
+        with:
+          name: boxedwine-bootstrap-root
+          path: build-assets
+
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: "16.4"
+
+      - name: Prepare pinned Boxedwine source
+        run: |
+          bash scripts/prepare-boxedwine.sh third_party/boxedwine
+          git -C third_party/boxedwine apply --check \
+            "$GITHUB_WORKSPACE/patches/boxedwine-ios-embedded.patch"
+          git -C third_party/boxedwine apply \
+            "$GITHUB_WORKSPACE/patches/boxedwine-ios-embedded.patch"
 
       - name: Configure iPhone target
         run: |
@@ -56,7 +105,11 @@ jobs:
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
-            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DBOXEDWINE_SOURCE_DIR="$GITHUB_WORKSPACE/third_party/boxedwine" \
+            -DBOXEDWINE_BOOTSTRAP_ROOT_ZIP="$GITHUB_WORKSPACE/build-assets/boxedwine-bootstrap-root.zip"
 
       - name: Build unsigned application
         run: |
@@ -76,25 +129,30 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
             "$APP_PATH/Info.plist")" = "uk.co.jjhollis.sporebridge"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-            "$APP_PATH/Info.plist")" = "0.2.0"
+            "$APP_PATH/Info.plist")" = "0.3.0"
           test "$(/usr/libexec/PlistBuddy -c 'Print :UIFileSharingEnabled' \
             "$APP_PATH/Info.plist")" = "true"
+          find "$APP_PATH" -name boxedwine-bootstrap-root.zip -print -quit \
+            | grep -Fq boxedwine-bootstrap-root.zip
+          find "$APP_PATH" -path '*Licences*' -name license.txt -print -quit \
+            | grep -Fq license.txt
           strings "$APP_PATH/SporeBridge" | grep -Fq "Choose Spore folder"
           strings "$APP_PATH/SporeBridge" | grep -Fq \
             "Run runtime readiness test"
           strings "$APP_PATH/SporeBridge" | grep -Fq \
-            "runtime-readiness.json"
-          strings "$APP_PATH/SporeBridge" | grep -Fq "Boxedwine"
+            "Run Boxedwine interpreter test"
+          strings "$APP_PATH/SporeBridge" | grep -Fq \
+            "boxedwine-interpreter-ok"
           lipo "$APP_PATH/SporeBridge" -verify_arch arm64
           mkdir -p package/Payload
           ditto "$APP_PATH" package/Payload/SporeBridge.app
           cd package
-          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.2.0-unsigned.ipa" Payload
+          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.3.0-unsigned.ipa" Payload
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: SporeBridge-iOS-v0.2.0
-          path: SporeBridge-iOS-v0.2.0-unsigned.ipa
+          name: SporeBridge-iOS-v0.3.0
+          path: SporeBridge-iOS-v0.3.0-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
