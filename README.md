@@ -10,7 +10,7 @@ files remain on the device and are not uploaded to a server.
 
 ## Current milestone
 
-Version 0.3.1 attaches the first interpreter-only Boxedwine bootstrap to the
+Version 0.3.2 attaches the first interpreter-only Boxedwine bootstrap to the
 import and validation shell:
 
 - Presents a native iOS folder picker.
@@ -33,6 +33,9 @@ import and validation shell:
   physical-device failure does not leave a misleading empty file.
 - Saves `boxedwine-bootstrap-result.json` with the phase, exit code and marker
   result; an interrupted run remains recorded as `running`.
+- Marks SDL ready from SporeBridge's native UIKit entry point before running
+  the headless bootstrap. This is required because the app owns its UIKit
+  lifecycle instead of using SDL's application delegate.
 
 The longer runtime milestone uses
 [Boxedwine](https://github.com/danoon2/Boxedwine), an open-source C++/SDL
@@ -57,7 +60,7 @@ The concrete first-port configuration and device-test sequence are recorded in
    - `SporebinEP1/SporeApp.exe` for Galactic Adventures.
 5. It must also contain a data folder with at least one `.package` file.
 
-Version 0.3.1 deliberately imports folders rather than extracting ZIP archives
+Version 0.3.2 deliberately imports folders rather than extracting ZIP archives
 inside the app. This keeps the first proof of concept small and auditable.
 
 ## Building the validator tests
