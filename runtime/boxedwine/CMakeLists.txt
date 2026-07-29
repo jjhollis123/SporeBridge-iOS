@@ -17,6 +17,14 @@ add_subdirectory(
 target_compile_options(SDL2-static PRIVATE
   -Wno-error=declaration-after-statement
 )
+file(GLOB_RECURSE BOXEDWINE_SDL_OBJC_SOURCES
+  "${BOXEDWINE_SOURCE_DIR}/lib/sdl2/src/*.m"
+)
+set_source_files_properties(
+  ${BOXEDWINE_SDL_OBJC_SOURCES}
+  DIRECTORY "${BOXEDWINE_SOURCE_DIR}/lib/sdl2"
+  PROPERTIES LANGUAGE OBJC
+)
 
 file(GLOB BOXEDWINE_SDL_SOURCES
   "${BOXEDWINE_SOURCE_DIR}/source/sdl/*.cpp"
