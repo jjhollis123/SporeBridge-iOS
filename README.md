@@ -10,13 +10,19 @@ files remain on the device and are not uploaded to a server.
 
 ## Current milestone
 
-Version 0.1 is the import and validation shell:
+Version 0.2 adds an on-device runtime readiness probe to the import and
+validation shell:
 
 - Presents a native iOS folder picker.
 - Recognises base-game and Galactic Adventures executable layouts.
 - Checks for `SporeApp.exe` and package data without relying on filename case.
 - Copies a validated installation into the app's Documents directory.
 - Generates a local import manifest.
+- Reports the exact iPad/iPhone hardware identifier and iOS version.
+- Verifies the non-executable virtual-memory operations required by the first
+  Boxedwine interpreter build.
+- Records the Metal graphics device and saves a JSON diagnostic report in the
+  app's Documents directory.
 - Clearly reports that the Windows runtime is not attached yet.
 
 The runtime milestone will integrate an iOS port of
@@ -42,7 +48,7 @@ The concrete first-port configuration and device-test sequence are recorded in
    - `SporebinEP1/SporeApp.exe` for Galactic Adventures.
 5. It must also contain a data folder with at least one `.package` file.
 
-Version 0.1 deliberately imports folders rather than extracting ZIP archives
+Version 0.2 deliberately imports folders rather than extracting ZIP archives
 inside the app. This keeps the first proof of concept small and auditable.
 
 ## Building the validator tests
@@ -60,15 +66,16 @@ g++ -std=c++17 -Wall -Wextra -Werror -pedantic \
 ## Building the unsigned IPA
 
 The included GitHub Actions workflow uses a macOS runner and Xcode to produce
-an unsigned arm64 IPA. The build contains only the native importer and
-validator until the Boxedwine runtime milestone is completed.
+an unsigned arm64 IPA. The build contains the native importer, validator and
+runtime readiness probe until the Boxedwine runtime milestone is completed.
 
 ## Status and limitations
 
-Passing the import check proves only that iOS can receive and recognise a Spore
-installation. It does not prove playable speed. The next decisive test is to
-bring up Boxedwine on iOS, launch the supplied `SporeApp.exe`, and capture the
-first graphics and diagnostic output.
+Passing the import and readiness checks proves only that iOS can receive a
+Spore installation and provide the basic memory and graphics facilities needed
+by the first interpreter experiment. It does not prove playable speed. The next
+decisive test is to bring up Boxedwine on iOS, launch the supplied
+`SporeApp.exe`, and capture the first graphics and diagnostic output.
 
 This is an independent preservation and compatibility experiment. It is not
 affiliated with, authorised by or endorsed by Electronic Arts or Maxis.
