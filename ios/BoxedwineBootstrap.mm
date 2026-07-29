@@ -11,7 +11,7 @@ int boxedmain(int argc, const char** argv);
 namespace {
 
 constexpr char kExpectedMarker[] = "boxedwine-interpreter-ok\n";
-constexpr char kProjectVersion[] = "0.3.1";
+constexpr char kProjectVersion[] = "0.3.2";
 std::atomic_bool gBootstrapStarted = false;
 
 NSURL* DocumentsDirectory() {

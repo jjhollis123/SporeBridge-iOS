@@ -46,9 +46,11 @@ Status: in progress. The physical-device memory/Metal probe passed on an
 `iPad12,1` with an Apple A13 GPU. Version 0.3 compiled the pinned Boxedwine
 normal interpreter into the arm64 iOS app and added a headless 32-bit x86 ELF
 bootstrap. The first physical-device run returned `FAILED` before producing
-the marker, while its buffered log remained empty. Version 0.3.1 flushes every
-embedded log write and saves a structured result before Boxedwine starts, so
-the exact device failure boundary can be identified on the next run.
+the marker, while its buffered log remained empty. Version 0.3.1 added durable
+diagnostics and identified the boundary: SDL rejected SporeBridge's native
+UIKit entry point before the guest programme loaded. Version 0.3.2 explicitly
+marks SDL ready before `UIApplicationMain`, allowing the next headless test to
+continue into Boxedwine without replacing SporeBridge's app delegate.
 
 Success means:
 
