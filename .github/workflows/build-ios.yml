@@ -129,7 +129,7 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
             "$APP_PATH/Info.plist")" = "uk.co.jjhollis.sporebridge"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-            "$APP_PATH/Info.plist")" = "0.3.1"
+            "$APP_PATH/Info.plist")" = "0.3.2"
           test "$(/usr/libexec/PlistBuddy -c 'Print :UIFileSharingEnabled' \
             "$APP_PATH/Info.plist")" = "true"
           find "$APP_PATH" -name boxedwine-bootstrap-root.zip -print -quit \
@@ -149,12 +149,12 @@ jobs:
           mkdir -p package/Payload
           ditto "$APP_PATH" package/Payload/SporeBridge.app
           cd package
-          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.3.1-unsigned.ipa" Payload
+          zip -qry "$GITHUB_WORKSPACE/SporeBridge-iOS-v0.3.2-unsigned.ipa" Payload
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: SporeBridge-iOS-v0.3.1
-          path: SporeBridge-iOS-v0.3.1-unsigned.ipa
+          name: SporeBridge-iOS-v0.3.2
+          path: SporeBridge-iOS-v0.3.2-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
